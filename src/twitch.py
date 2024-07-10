@@ -44,8 +44,11 @@ class Twitch:
                     "url": i["node"]["url"],
                     "title": i["node"]["title"],
                     "view": i["node"]["viewCount"],
+                    "duration": i["node"]["durationSeconds"],
                     "genre": i["node"]["game"]["name"],
                     "slug": i["node"]["slug"],
                 }
                 clips.append(clip)
+            clips.sort(key=lambda x: x["view"], reverse=True)
+
         return clips
