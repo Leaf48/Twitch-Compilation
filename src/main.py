@@ -70,6 +70,8 @@ for clip in st.session_state.clips:
 if st.button("Create Compilation"):
     st.session_state.output = "compilation.mp4"
 
+    reencoded_clips = []
+
     progress_bar = st.progress(0)
     with open("list.txt", "w") as f:
         for i, clip in enumerate(st.session_state.checkedClips):
@@ -89,7 +91,9 @@ if st.button("Create Compilation"):
             ]
             subprocess.run(cmd)
 
-            progress_bar.progress((i + 1) / len(st.session_state.checkedClips) * 2)
+            progress_bar.progress(
+                (i * 2 + 1) / (len(st.session_state.checkedClips) * 2)
+            )
 
             cmd_text = [
                 "ffmpeg",
@@ -102,21 +106,40 @@ if st.button("Create Compilation"):
             ]
             subprocess.run(cmd_text)
 
+            reencoded_clips.append(output_with_text)
+
             f.write(f"file '{output_with_text}'\n")
 
-            progress_bar.progress((i + 2) / len(st.session_state.checkedClips) * 2)
+            progress_bar.progress(
+                (i * 2 + 2) / (len(st.session_state.checkedClips) * 2)
+            )
+
+    # Creating crossfade filter commands
+    input_files = []
+    filter_complex = ""
+    for i, clip in enumerate(reencoded_clips):
+        input_files.extend(["-i", clip])
+        if i == 0:
+            filter_complex += f"[{i}:v][{i}:a]"
+        else:
+            filter_complex += f"[v{i}][a{i}][{i}:v][{i}:a]xfade=transition=fade:duration=1:offset=4[v{i+1}a];"
+
+    filter_complex += f"[v{len(reencoded_clips)}a][{len(reencoded_clips)-1}:a]concat=n={len(reencoded_clips)}:v=1:a=1[v][a]"
 
     cmd = [
         "ffmpeg",
         "-y",
-        "-safe",
-        "0",
-        "-f",
-        "concat",
-        "-i",
-        "list.txt",
-        "-c",
-        "copy",
+        *input_files,
+        "-filter_complex",
+        filter_complex,
+        "-map",
+        "[v]",
+        "-map",
+        "[a]",
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "aac",
         st.session_state.output,
     ]
     subprocess.run(cmd)
