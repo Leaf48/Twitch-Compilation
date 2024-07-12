@@ -22,13 +22,16 @@ if "output" not in st.session_state:
 if "date_range" not in st.session_state:
     st.session_state.date_range = ""
 
+
 # ? Set font
 font_file = st.file_uploader("Upload a font file", type=["otf", "ttf"])
 font_path = ""
+print(font_file)
+
+reencoded_dir = "reencoded_clips"
 
 if font_file is not None:
     # create re-encoded clips directory
-    reencoded_dir = "reencoded_clips"
     os.makedirs(reencoded_dir, exist_ok=True)
 
     font_path = os.path.join(reencoded_dir, font_file.name)
@@ -133,27 +136,83 @@ if st.button("Create Compilation"):
 
         st.session_state.checkedClips = _temp
 
-    progress_bar_edit = st.progress(0)
+    # ? Get twitch comments
+    for n, i in enumerate(st.session_state.checkedClips):
+        output_json = os.path.join(reencoded_dir, f"comment_{n}.json")
+        comment_output = os.path.join(reencoded_dir, f"comment_clip__{n}.mp4")
+        video_with_comment = os.path.join(reencoded_dir, f"video_with_comment_{n}.mp4")
+        st.session_state.checkedClips[n]["video_with_comment"] = video_with_comment
+
+        # Download chat json
+        cmd_json = [
+            "./TwitchDownloaderCLI",
+            "chatdownload",
+            "--id",
+            i["slug"],
+            "-o",
+            output_json,
+            "-E",
+            "--collision",
+            "Overwrite",
+        ]
+        subprocess.run(cmd_json)
+
+        # Render chat
+        cmd_render = [
+            "./TwitchDownloaderCLI",
+            "chatrender",
+            "-i",
+            output_json,
+            "-h",
+            "1080",
+            "-w",
+            "422",
+            "--framerate",
+            "30",
+            "--update-rate",
+            "0",
+            "--font-size",
+            "18",
+            "--collision",
+            "Overwrite",
+            "-o",
+            comment_output,
+        ]
+        subprocess.run(cmd_render)
+
+        # Merge clip with comment
+        cmd_merge = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            i["output_file"],
+            "-i",
+            comment_output,
+            "-filter_complex",
+            "[1]crop=in_w:320:0:in_h-320,format=rgba,colorchannelmixer=aa=0.5[ov];[0][ov]overlay=W-w+20:H-h-70",
+            "-c:a",
+            "copy",
+            video_with_comment,
+        ]
+        subprocess.run(cmd_merge)
 
     clips = []
     crossfade_duration = 1
 
     # 動画クリップを読み込んでリストに追加
+    # Load clips and add to the list
     for i in st.session_state.checkedClips:
-        clips.append(VideoFileClip(i["output_file"]))
+        clips.append(VideoFileClip(i["video_with_comment"]))
 
-    # すべてのクリップにクロスフェードを適用
+    # Apply crossfade to all clips
     for j in range(1, len(clips)):
         clips[j - 1] = clips[j - 1].crossfadeout(crossfade_duration)
         clips[j] = clips[j].crossfadein(crossfade_duration)
-        progress_bar_edit.progress(j / len(clips))
 
-    progress_bar_edit.progress(1)
-
-    # クリップを結合
+    # Merge clips
     final_clip = concatenate_videoclips(clips, method="compose")
 
-    # 結果をファイルに書き出す
+    # Write final result
     final_clip.write_videofile(st.session_state.output)
 
 
@@ -167,6 +226,11 @@ if st.button("Remove Files"):
         if os.path.exists(i["filename"]):
             os.remove(i["filename"])
 
-    for i in st.session_state.checkedClips:
-        if os.path.exists(i["output_file"]):
-            os.remove(i["output_file"])
+    for i in os.listdir(reencoded_dir):
+        if i != font_file.name:
+            path = os.path.join(reencoded_dir, i)
+            os.remove(path)
+
+    st.session_state.checkedClips = []
+    st.session_state.clips = []
+    st.session_state.output = ""

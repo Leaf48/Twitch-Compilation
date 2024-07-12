@@ -164,3 +164,4 @@ cython_debug/
 *.otf
 *.txt
 src/.DS_Store
+src/TwitchDownloaderCLI
