@@ -45,7 +45,7 @@ class Twitch:
                     "title": i["node"]["title"],
                     "view": i["node"]["viewCount"],
                     "duration": i["node"]["durationSeconds"],
-                    "genre": i["node"]["game"]["name"],
+                    "genre": i["node"]["game"]["name"].replace(" ", "_"),
                     "slug": i["node"]["slug"],
                 }
                 clips.append(clip)

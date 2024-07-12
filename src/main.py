@@ -2,18 +2,14 @@ import os
 import subprocess
 import time
 from twitch import Twitch
+from utils_ import downloadVideo
 import streamlit as st
 from moviepy.editor import (
     VideoFileClip,
     concatenate_videoclips,
 )
 
-
-def downloadVideo(url: str, output_title: str) -> None:
-    cmd = ["streamlink", url, "best", "-f", "--output", output_title + ".mp4"]
-    subprocess.run(cmd)
-
-
+# Initialize states
 if "checkedClips" not in st.session_state:
     st.session_state.checkedClips = []
 
@@ -26,6 +22,7 @@ if "output" not in st.session_state:
 if "date_range" not in st.session_state:
     st.session_state.date_range = ""
 
+# ? Set font
 font_file = st.file_uploader("Upload a font file", type=["otf", "ttf"])
 font_path = ""
 
@@ -38,12 +35,15 @@ if font_file is not None:
     with open(font_path, "wb") as f:
         f.write(font_file.getbuffer())
 
+# ? Set date range
 st.session_state.date_range = st.selectbox(
     "Choose clip range", ["LAST_DAY", "LAST_WEEK", "LAST_MONTH", "ALL_TIME"]
 )
 
+# ? Set streamer
 streamer = st.text_input("Enter streamer")
 
+# ? Start downloading
 if st.button("Download Clips", disabled=streamer == ""):
     t = Twitch(streamer=streamer)
     st.session_state.clips = t.getClips(st.session_state.date_range)
@@ -59,6 +59,7 @@ if st.button("Download Clips", disabled=streamer == ""):
 
         progress_bar.progress((n + 1) / len(clips))
 
+# ? Show donwloaded clips
 st.write("Downloaded Clips:")
 for clip in st.session_state.clips:
     key = clip["slug"]
@@ -79,10 +80,12 @@ for clip in st.session_state.clips:
     st.video(clip["filename"])
 
 
+# ? Start creating compilation
 if st.button("Create Compilation"):
     st.session_state.output = "compilation_%s.mp4" % int(time.time())
 
     progress_bar = st.progress(0)
+
     # ? Reencode and put text
     with open("list.txt", "w") as f:
         _temp = []
@@ -145,6 +148,8 @@ if st.button("Create Compilation"):
         clips[j] = clips[j].crossfadein(crossfade_duration)
         progress_bar_edit.progress(j / len(clips))
 
+    progress_bar_edit.progress(1)
+
     # クリップを結合
     final_clip = concatenate_videoclips(clips, method="compose")
 
@@ -152,6 +157,16 @@ if st.button("Create Compilation"):
     final_clip.write_videofile(st.session_state.output)
 
 
+# ? Show compilation
 if st.session_state.output:
     st.write("Generated Compilation")
     st.video(st.session_state.output)
+
+if st.button("Remove Files"):
+    for i in st.session_state.clips:
+        if os.path.exists(i["filename"]):
+            os.remove(i["filename"])
+
+    for i in st.session_state.checkedClips:
+        if os.path.exists(i["output_file"]):
+            os.remove(i["output_file"])
