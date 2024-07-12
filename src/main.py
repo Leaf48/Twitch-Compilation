@@ -2,6 +2,12 @@ import os
 import subprocess
 from twitch import Twitch
 import streamlit as st
+from moviepy.editor import (
+    CompositeVideoClip,
+    VideoFileClip,
+    vfx,
+    concatenate_videoclips,
+)
 
 
 def downloadVideo(url: str, output_title: str) -> None:
@@ -70,13 +76,17 @@ for clip in st.session_state.clips:
 if st.button("Create Compilation"):
     st.session_state.output = "compilation.mp4"
 
-    reencoded_clips = []
-
     progress_bar = st.progress(0)
+    # ? Reencode and put text
     with open("list.txt", "w") as f:
+        _temp = []
+
         for i, clip in enumerate(st.session_state.checkedClips):
             reencoded_clip = os.path.join(reencoded_dir, f"clip_{i}.mp4")
             output_with_text = os.path.join(reencoded_dir, f"clip_with_text_{i}.mp4")
+
+            clip["output_file"] = output_with_text
+            _temp.append(clip)
 
             cmd = [
                 "ffmpeg",
@@ -106,43 +116,31 @@ if st.button("Create Compilation"):
             ]
             subprocess.run(cmd_text)
 
-            reencoded_clips.append(output_with_text)
-
             f.write(f"file '{output_with_text}'\n")
 
             progress_bar.progress(
                 (i * 2 + 2) / (len(st.session_state.checkedClips) * 2)
             )
 
-    # Creating crossfade filter commands
-    input_files = []
-    filter_complex = ""
-    for i, clip in enumerate(reencoded_clips):
-        input_files.extend(["-i", clip])
-        if i == 0:
-            filter_complex += f"[{i}:v][{i}:a]"
-        else:
-            filter_complex += f"[v{i}][a{i}][{i}:v][{i}:a]xfade=transition=fade:duration=1:offset=4[v{i+1}a];"
+        st.session_state.checkedClips = _temp
 
-    filter_complex += f"[v{len(reencoded_clips)}a][{len(reencoded_clips)-1}:a]concat=n={len(reencoded_clips)}:v=1:a=1[v][a]"
+    clips = []
+    crossfade_duration = 1
 
-    cmd = [
-        "ffmpeg",
-        "-y",
-        *input_files,
-        "-filter_complex",
-        filter_complex,
-        "-map",
-        "[v]",
-        "-map",
-        "[a]",
-        "-c:v",
-        "libx264",
-        "-c:a",
-        "aac",
-        st.session_state.output,
-    ]
-    subprocess.run(cmd)
+    # 動画クリップを読み込んでリストに追加
+    for i in st.session_state.checkedClips:
+        clips.append(VideoFileClip(i["output_file"]))
+
+    # すべてのクリップにクロスフェードを適用
+    for j in range(1, len(clips)):
+        clips[j - 1] = clips[j - 1].crossfadeout(crossfade_duration)
+        clips[j] = clips[j].crossfadein(crossfade_duration)
+
+    # クリップを結合
+    final_clip = concatenate_videoclips(clips, method="compose")
+
+    # 結果をファイルに書き出す
+    final_clip.write_videofile(st.session_state.output)
 
 
 if st.session_state.output:
