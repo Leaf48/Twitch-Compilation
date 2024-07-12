@@ -1,11 +1,10 @@
 import os
 import subprocess
+import time
 from twitch import Twitch
 import streamlit as st
 from moviepy.editor import (
-    CompositeVideoClip,
     VideoFileClip,
-    vfx,
     concatenate_videoclips,
 )
 
@@ -21,8 +20,11 @@ if "checkedClips" not in st.session_state:
 if "clips" not in st.session_state:
     st.session_state.clips = []
 
-if "compilation.mp4" not in st.session_state:
+if "output" not in st.session_state:
     st.session_state.output = ""
+
+if "date_range" not in st.session_state:
+    st.session_state.date_range = ""
 
 font_file = st.file_uploader("Upload a font file", type=["otf", "ttf"])
 font_path = ""
@@ -36,11 +38,15 @@ if font_file is not None:
     with open(font_path, "wb") as f:
         f.write(font_file.getbuffer())
 
+st.session_state.date_range = st.selectbox(
+    "Choose clip range", ["LAST_DAY", "LAST_WEEK", "LAST_MONTH", "ALL_TIME"]
+)
+
 streamer = st.text_input("Enter streamer")
 
-if st.button("Download Clips"):
+if st.button("Download Clips", disabled=streamer == ""):
     t = Twitch(streamer=streamer)
-    st.session_state.clips = t.getClips("LAST_DAY")
+    st.session_state.clips = t.getClips(st.session_state.date_range)
     clips = st.session_state.clips
 
     progress_bar = st.progress(0)
@@ -74,7 +80,7 @@ for clip in st.session_state.clips:
 
 
 if st.button("Create Compilation"):
-    st.session_state.output = "compilation.mp4"
+    st.session_state.output = "compilation_%s.mp4" % int(time.time())
 
     progress_bar = st.progress(0)
     # ? Reencode and put text
@@ -124,6 +130,8 @@ if st.button("Create Compilation"):
 
         st.session_state.checkedClips = _temp
 
+    progress_bar_edit = st.progress(0)
+
     clips = []
     crossfade_duration = 1
 
@@ -135,6 +143,7 @@ if st.button("Create Compilation"):
     for j in range(1, len(clips)):
         clips[j - 1] = clips[j - 1].crossfadeout(crossfade_duration)
         clips[j] = clips[j].crossfadein(crossfade_duration)
+        progress_bar_edit.progress(j / len(clips))
 
     # クリップを結合
     final_clip = concatenate_videoclips(clips, method="compose")
