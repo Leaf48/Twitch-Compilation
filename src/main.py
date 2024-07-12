@@ -26,7 +26,6 @@ if "date_range" not in st.session_state:
 # ? Set font
 font_file = st.file_uploader("Upload a font file", type=["otf", "ttf"])
 font_path = ""
-print(font_file)
 
 reencoded_dir = "reencoded_clips"
 
@@ -75,6 +74,10 @@ for clip in st.session_state.clips:
     else:
         if clip in st.session_state.checkedClips:
             st.session_state.checkedClips.remove(clip)
+
+    clip["set_chat_overlay"] = st.checkbox(
+        "Set chat overlay", key=key + "Set_chat_overlay", value=True
+    )
 
     new_title = st.text_input(
         "Enter if you need to change title", value=clip["title"], key=key + "text_input"
@@ -136,12 +139,17 @@ if st.button("Create Compilation"):
 
         st.session_state.checkedClips = _temp
 
-    # ? Get twitch comments
+    # ? Get and merge twitch comments
     for n, i in enumerate(st.session_state.checkedClips):
         output_json = os.path.join(reencoded_dir, f"comment_{n}.json")
         comment_output = os.path.join(reencoded_dir, f"comment_clip__{n}.mp4")
         video_with_comment = os.path.join(reencoded_dir, f"video_with_comment_{n}.mp4")
-        st.session_state.checkedClips[n]["video_with_comment"] = video_with_comment
+        # st.session_state.checkedClips[n]["video_with_comment"] = video_with_comment
+        i["video_with_comment"] = video_with_comment
+
+        if not i["set_chat_overlay"]:
+            i["video_with_comment"] = i["output_file"]
+            continue
 
         # Download chat json
         cmd_json = [
