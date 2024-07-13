@@ -163,6 +163,7 @@ cython_debug/
 *.mp4
 *.otf
 *.txt
+!requirements.txt
 .DS_Store
 TwitchDownloaderCLI
 *.json
