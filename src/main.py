@@ -235,7 +235,7 @@ if st.button("Create Compilation"):
 
     st.session_state.checkedClips = []
     st.session_state.clips = []
-    st.session_state.output = ""
+    # st.session_state.output = ""
 
 
 # ? Show compilation
