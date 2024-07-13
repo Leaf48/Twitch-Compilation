@@ -223,13 +223,7 @@ if st.button("Create Compilation"):
     # Write final result
     final_clip.write_videofile(st.session_state.output)
 
-
-# ? Show compilation
-if st.session_state.output:
-    st.write("Generated Compilation")
-    st.video(st.session_state.output)
-
-if st.button("Remove Files"):
+    # ? Reset
     for i in st.session_state.clips:
         if os.path.exists(i["filename"]):
             os.remove(i["filename"])
@@ -242,3 +236,9 @@ if st.button("Remove Files"):
     st.session_state.checkedClips = []
     st.session_state.clips = []
     st.session_state.output = ""
+
+
+# ? Show compilation
+if st.session_state.output:
+    st.write("Generated Compilation")
+    st.video(st.session_state.output)
