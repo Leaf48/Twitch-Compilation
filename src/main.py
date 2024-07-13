@@ -29,6 +29,9 @@ font_path = ""
 
 reencoded_dir = "reencoded_clips"
 
+temp_dir = "temp_files"
+os.makedirs(temp_dir, exist_ok=True)
+
 if font_file is not None:
     # create re-encoded clips directory
     os.makedirs(reencoded_dir, exist_ok=True)
@@ -55,9 +58,9 @@ if st.button("Download Clips", disabled=streamer == ""):
 
     for n, i in enumerate(clips):
         title = f'{i["view"]}_{i["genre"]}_{i["duration"]}'
-        clips[n]["filename"] = title + ".mp4"
+        clips[n]["filename"] = os.path.join(temp_dir, title + ".mp4")
 
-        downloadVideo(i["url"], title)
+        downloadVideo(i["url"], clips[n]["filename"])
 
         progress_bar.progress((n + 1) / len(clips))
 
@@ -93,7 +96,8 @@ if st.button("Create Compilation"):
     progress_bar = st.progress(0)
 
     # ? Reencode and put text
-    with open("list.txt", "w") as f:
+    list_file = os.path.join(temp_dir, "list.txt")
+    with open(list_file, "w") as f:
         _temp = []
 
         for i, clip in enumerate(st.session_state.checkedClips):
@@ -144,7 +148,7 @@ if st.button("Create Compilation"):
         output_json = os.path.join(reencoded_dir, f"comment_{n}.json")
         comment_output = os.path.join(reencoded_dir, f"comment_clip__{n}.mp4")
         video_with_comment = os.path.join(reencoded_dir, f"video_with_comment_{n}.mp4")
-        # st.session_state.checkedClips[n]["video_with_comment"] = video_with_comment
+
         i["video_with_comment"] = video_with_comment
 
         if not i["set_chat_overlay"]:
@@ -224,6 +228,9 @@ if st.button("Create Compilation"):
     final_clip.write_videofile(st.session_state.output)
 
     # ? Reset
+    if os.path.exists(list_file):
+        os.remove(list_file)
+
     for i in st.session_state.clips:
         if os.path.exists(i["filename"]):
             os.remove(i["filename"])
