@@ -1,0 +1,5 @@
+TwitchDownloaderCLI
+reencoded_clips/*
+temp_files/*
+*.mp4
+*.otf
