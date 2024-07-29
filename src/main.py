@@ -188,6 +188,6 @@ if st.button("Process"):
     # Write final result
     final_clip.write_videofile(st.session_state.output)
 
-if os.path.exists(st.session_state.output):
+if st.session_state.output is not None and os.path.exists(st.session_state.output):
     st.write("Final Result")
     st.video(st.session_state.output)
