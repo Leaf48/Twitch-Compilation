@@ -47,15 +47,17 @@ st.session_state.filter = st.selectbox(
     "Filter", ["LAST_DAY", "LAST_WEEK", "LAST_MONTH", "ALL_TIME"]
 )
 
-# ? Set output path
-if st.session_state.output is None:
-    st.session_state.output = f"final_{get_timestamp()}.mp4"
 
 # ? Create working directory
 if st.session_state.workdir is None:
     st.session_state.workdir = os.path.join(f"wd_{get_timestamp()}")
     os.mkdir(st.session_state.workdir)
 
+# ? Set output path
+if st.session_state.output is None:
+    st.session_state.output = os.path.join(
+        st.session_state.workdir, f"final_{get_timestamp()}.mp4"
+    )
 
 # ? Set font
 if st.session_state.font_path is None:
