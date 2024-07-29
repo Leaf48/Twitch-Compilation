@@ -136,7 +136,9 @@ if st.session_state.all_clips:
 
     for i in st.session_state.all_clips:
         st.write(i["title"], f"| {i["view"]} views | {i["game"]} |")
-        i["title"] = st.text_input("Title if needed", value=i["title"])
+        i["title"] = st.text_input(
+            "Title if needed", value=i["title"], key=f"title_{i["slug"]}"
+        )
         i["use"] = st.checkbox("Include", key=f"use_{i["slug"]}")
         i["use_comment"] = st.checkbox(
             "Comment Overlay", key=f"use_comment_{i["slug"]}", value=True
