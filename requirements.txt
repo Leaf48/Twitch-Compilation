@@ -1,3 +1,4 @@
 streamlit
 moviepy
 streamlink
+streamlit_sortables
