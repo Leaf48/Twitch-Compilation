@@ -1,6 +1,22 @@
 import subprocess
 
 
+def add_title_to_video(video_path: str, font_path: str, clip_title: str, output: str):
+    cmd_text = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        video_path,
+        "-vf",
+        f"drawtext=fontfile='{font_path}':text='{clip_title}':"
+        "x=45:y=(h-text_h)-10:fontsize=64:fontcolor=white:"
+        "box=1:boxcolor=black@0.65:boxborderw=8",
+        output,
+    ]
+
+    subprocess.run(cmd_text)
+
+
 def merge_video_with_comment_and_add_title(
     video_path: str, comment_path: str, font_path: str, clip_title: str, output: str
 ):
@@ -33,13 +49,13 @@ def merge_video_with_comment_and_add_title(
         "-c:v",
         "libx264",
         "-b:v",
-        "5M",  # Increase video bitrate for better quality
+        "5M",
         "-c:a",
         "aac",
         "-b:a",
-        "192k",  # Increase audio bitrate for better quality
+        "192k",
         "-preset",
-        "slow",  # Use a slower preset for better compression and quality
+        "slow",
         "-movflags",
         "+faststart",
         output,

@@ -3,7 +3,7 @@ import shutil
 import streamlit as st
 from lib.utils_ import get_timestamp
 from lib.twitch.clips import get_clips, render_comment, download_clip
-from lib.clip import merge_video_with_comment_and_add_title
+from lib.clip import merge_video_with_comment_and_add_title, add_title_to_video
 from lib.streamlit_.html import render_twitch_embed
 from moviepy.editor import (
     VideoFileClip,
@@ -198,19 +198,29 @@ def start_merging():
                 st.session_state.workdir,
                 f"chat_{i["view"]}_{i["game"]}_{i["title"]}.mp4",
             )
-            render_comment(i["slug"], i["comment_path"])
 
+            # Set output path
             i["output_path"] = os.path.join(
                 st.session_state.workdir,
                 f"output_{i["view"]}_{i["game"]}_{i["title"]}.mp4",
             )
-            merge_video_with_comment_and_add_title(
-                i["clip_path"],
-                i["comment_path"],
-                st.session_state.font_path,
-                i["title"],
-                i["output_path"],
-            )
+
+            # When VOD is unavailable
+            if render_comment(i["slug"], i["comment_path"]):
+                merge_video_with_comment_and_add_title(
+                    i["clip_path"],
+                    i["comment_path"],
+                    st.session_state.font_path,
+                    i["title"],
+                    i["output_path"],
+                )
+            else:
+                add_title_to_video(
+                    i["clip_path"],
+                    st.session_state.font_path,
+                    i["title"],
+                    i["output_path"],
+                )
         else:
             i["output_path"] = i["clip_path"]
 
