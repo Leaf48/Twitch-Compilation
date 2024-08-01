@@ -117,6 +117,10 @@ def search():
 
     st.session_state.all_clips = list(unique_clips.values())
 
+    st.session_state.all_clips = sorted(
+        st.session_state.all_clips, key=lambda x: x["view"], reverse=True
+    )
+
 
 st.button(
     "Search", disabled=len(st.session_state.streamers_available) == 0, on_click=search
@@ -164,12 +168,10 @@ st.divider()
 def start_downloading():
     st.session_state.all_clips = [i for i in st.session_state.all_clips if i["use"]]
 
-    print("Before", len(st.session_state.all_clips), st.session_state.all_clips)
     # Reorder
     st.session_state.all_clips = sorted(
         st.session_state.all_clips, key=lambda x: x["order"]
     )
-    print("After", len(st.session_state.all_clips), st.session_state.all_clips)
 
     progress_bar = st.progress(0, text="Downloading...")
     for n, i in enumerate(st.session_state.all_clips):
