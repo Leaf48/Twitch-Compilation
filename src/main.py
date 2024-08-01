@@ -29,7 +29,15 @@ if "workdir" not in st.session_state:
 if "font_path" not in st.session_state:
     st.session_state.font_path = None
 if "streamers" not in st.session_state:
-    st.session_state.streamers = []
+    st.session_state.streamers = [
+        "dmf_kyochan",
+        "dasoku_aniki",
+        "yuyuta0702",
+        "turuokamonohashi",
+        "kokujintv",
+        "kato_junichi0817",
+        "hanjoudesu",
+    ]
 if "streamers_available" not in st.session_state:
     st.session_state.streamers_available = []
 if "all_clips" not in st.session_state:
@@ -85,7 +93,9 @@ st.text_input("Streamer", key="streamer_input", on_change=add_streamer)
 
 # ? Show and edit streamers
 st.session_state.streamers_available = st.multiselect(
-    "Streamers", options=st.session_state.streamers, default=st.session_state.streamers
+    "Streamers",
+    options=st.session_state.streamers,
+    default=st.session_state.streamers,
 )
 
 

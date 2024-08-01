@@ -34,10 +34,14 @@ def get_clips(username: str, view_threshold: int, filter: str):
     response = requests.request("POST", url, headers=headers, data=payload)
     data = response.json()
 
-    _edges = data[0]["data"]["user"]["clips"]["edges"]
-    _clips = [i["node"] for i in _edges if i["node"]["viewCount"] > view_threshold]
-
     clips = []
+
+    try:
+        _edges = data[0]["data"]["user"]["clips"]["edges"]
+        _clips = [i["node"] for i in _edges if i["node"]["viewCount"] > view_threshold]
+    except Exception:
+        return clips
+
     for i in _clips:
         try:
             _data = {
