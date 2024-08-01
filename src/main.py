@@ -37,6 +37,10 @@ if "streamers" not in st.session_state:
         "kokujintv",
         "kato_junichi0817",
         "hanjoudesu",
+        "nekoko88",
+        "bakumatsu_shishi",
+        "myakkomyako",
+        "kosuke_saiore",
     ]
 if "streamers_available" not in st.session_state:
     st.session_state.streamers_available = []
