@@ -39,14 +39,18 @@ def get_clips(username: str, view_threshold: int, filter: str):
 
     clips = []
     for i in _clips:
-        _data = {
-            "slug": i["slug"],
-            "url": i["url"],
-            "view": i["viewCount"],
-            "title": i["title"],
-            "game": i["game"]["name"],
-        }
-        clips.append(_data)
+        try:
+            _data = {
+                "slug": i["slug"],
+                "url": i["url"],
+                "view": i["viewCount"],
+                "title": i["title"].replace(" ", "_"),
+                "game": i["game"].get("name", "undefined").replace(" ", ""),
+                "createdAt": i["createdAt"],
+            }
+            clips.append(_data)
+        except Exception:
+            pass
 
     return clips
 

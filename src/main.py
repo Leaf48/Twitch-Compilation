@@ -3,8 +3,8 @@ import shutil
 import streamlit as st
 from lib.utils_ import get_timestamp
 from lib.twitch.clips import get_clips, render_comment, download_clip
-from lib.clip import merge_video_with_comment
-from streamlit_sortables import sort_items
+from lib.clip import merge_video_with_comment_and_add_title
+from lib.streamlit_.html import render_twitch_embed
 from moviepy.editor import (
     VideoFileClip,
     concatenate_videoclips,
@@ -16,6 +16,8 @@ if st.button("Remove cache"):
     dir = [i for i in os.listdir("./") if i.startswith("wd_")]
     for i in dir:
         shutil.rmtree(i)
+
+st.divider()
 
 # ? Static variables
 if "view_threshold" not in st.session_state:
@@ -62,11 +64,12 @@ if st.session_state.output is None:
 # ? Set font
 if st.session_state.font_path is None:
     font_file = st.file_uploader("Upload a font file", type=["otf", "ttf"])
-    font_path = ""
 
     if font_file is not None:
-        font_path = os.path.join(st.session_state.workdir, font_file.name)
-        with open(font_path, "wb") as f:
+        st.session_state.font_path = os.path.join(
+            st.session_state.workdir, font_file.name
+        )
+        with open(st.session_state.font_path, "wb") as f:
             f.write(font_file.getbuffer())
 
 
@@ -86,40 +89,24 @@ st.session_state.streamers_available = st.multiselect(
 )
 
 
-# ? Download
-def start_to_download():
-    # st.session_state.all_clips = []
+# Search clips from each streamers
+def search():
+    st.session_state.all_clips = []
+
     for i in st.session_state.streamers_available:
-        progress_bar = st.progress(0)
         clips = get_clips(i, st.session_state.view_threshold, st.session_state.filter)
-        for n, j in enumerate(clips):
-            if f"use_{j["slug"]}" in st.session_state:
-                continue
+        st.session_state.all_clips.extend(clips)
 
-            clip_output = os.path.join(
-                st.session_state.workdir,
-                f"clip_{j["view"]}_{j["game"]}_{j["title"]}.mp4",
-            )
-            download_clip(j["slug"], clip_output)
+    unique_clips = {}
+    for clip in st.session_state.all_clips:
+        unique_clips[clip["slug"]] = clip
 
-            # Setting
-            j["clip_path"] = clip_output
-            j["remove"] = False
-
-            st.session_state.all_clips.append(j)
-            progress_bar.progress((n + 1) / len(clips))
-            # break
-        progress_bar.empty()
-        # break
+    st.session_state.all_clips = list(unique_clips.values())
 
 
-if st.button(
-    "Download",
-    on_click=start_to_download,
-    disabled=len(st.session_state.streamers_available) == 0,
-):
-    st.session_state.output = None
-
+st.button(
+    "Search", disabled=len(st.session_state.streamers_available) == 0, on_click=search
+)
 
 # ? Show clips
 if st.session_state.all_clips:
@@ -127,15 +114,21 @@ if st.session_state.all_clips:
         i for i in st.session_state.all_clips if not i.get("remove", False)
     ]
 
-    clips_order = sort_items(
-        [i["title"] for i in st.session_state.all_clips],
-    )
+    for n, i in enumerate(st.session_state.all_clips):
+        st.divider()
 
-    title_to_clip = {clip["title"]: clip for clip in st.session_state.all_clips}
-    st.session_state.all_clips = [title_to_clip[title] for title in clips_order]
+        st.write(i["title"], f"| {i["view"]} views | {i["game"]} | {i["createdAt"]} |")
 
-    for i in st.session_state.all_clips:
-        st.write(i["title"], f"| {i["view"]} views | {i["game"]} |")
+        if "order" not in i:
+            i["order"] = n
+
+        input_value = st.number_input(
+            "order", key=f"order_{i['slug']}", step=1, value=i["order"]
+        )
+
+        if i["order"] != input_value:
+            i["order"] = input_value
+
         i["title"] = st.text_input(
             "Title if needed", value=i["title"], key=f"title_{i["slug"]}"
         )
@@ -143,17 +136,47 @@ if st.session_state.all_clips:
         i["use_comment"] = st.checkbox(
             "Comment Overlay", key=f"use_comment_{i["slug"]}", value=True
         )
+
         if st.button("Remove", key=f"remove_{i["slug"]}"):
             i["remove"] = True
             st.rerun()
 
-        st.video(i["clip_path"])
+        render_twitch_embed(i["slug"])
 
-# Start merging
-if st.button("Process"):
+st.divider()
+
+
+# ? Download
+def start_downloading():
+    st.session_state.all_clips = [i for i in st.session_state.all_clips if i["use"]]
+
+    print("Before", len(st.session_state.all_clips), st.session_state.all_clips)
+    # Reorder
+    st.session_state.all_clips = sorted(
+        st.session_state.all_clips, key=lambda x: x["order"]
+    )
+    print("After", len(st.session_state.all_clips), st.session_state.all_clips)
+
+    progress_bar = st.progress(0, text="Downloading...")
+    for n, i in enumerate(st.session_state.all_clips):
+        i["clip_path"] = os.path.join(
+            st.session_state.workdir,
+            f"clip_{i["view"]}_{i["game"]}_{i["title"]}.mp4",
+        )
+        download_clip(i["slug"], i["clip_path"])
+
+        progress_bar.progress(
+            (n + 1) / len(st.session_state.all_clips),
+            text=f"{n + 1} out of {len(st.session_state.all_clips)} have been done.",
+        )
+
+
+def start_merging():
     clips = [i for i in st.session_state.all_clips if i["use"]]
 
-    for i in clips:
+    progress_bar = st.progress(0, text="Rendering videos...")
+    for n, i in enumerate(clips):
+        # Render comments and merging a video with it
         if i["use_comment"]:
             i["comment_path"] = os.path.join(
                 st.session_state.workdir,
@@ -165,29 +188,46 @@ if st.button("Process"):
                 st.session_state.workdir,
                 f"output_{i["view"]}_{i["game"]}_{i["title"]}.mp4",
             )
-            merge_video_with_comment(
-                i["clip_path"], i["comment_path"], i["output_path"]
+            merge_video_with_comment_and_add_title(
+                i["clip_path"],
+                i["comment_path"],
+                st.session_state.font_path,
+                i["title"],
+                i["output_path"],
             )
         else:
             i["output_path"] = i["clip_path"]
 
-    # Merge all video with fade-inout
-    clip_queue = []
-    crossfade_duration = 1
-    for i in clips:
-        clip_queue.append(VideoFileClip(i["output_path"]))
+        progress_bar.progress(
+            (n + 1) / len(clips),
+            text=f"{n + 1} out of {len(clips)} have been rendered.",
+        )
 
-    # Apply crossfade to all clips
-    for j in range(1, len(clip_queue)):
-        clip_queue[j - 1] = clip_queue[j - 1].crossfadeout(crossfade_duration)
-        clip_queue[j] = clip_queue[j].crossfadein(crossfade_duration)
+    with st.status("Merging all videos..."):
+        # Merge all video with fade-inout
+        clip_queue = []
+        crossfade_duration = 1
+        for i in clips:
+            clip_queue.append(VideoFileClip(i["output_path"]))
 
-    # Merge clips
-    final_clip = concatenate_videoclips(clip_queue, method="compose")
+        # Apply crossfade to all clips
+        for j in range(1, len(clip_queue)):
+            clip_queue[j - 1] = clip_queue[j - 1].crossfadeout(crossfade_duration)
+            clip_queue[j] = clip_queue[j].crossfadein(crossfade_duration)
 
-    # Write final result
-    final_clip.write_videofile(st.session_state.output)
+        # Merge clips
+        final_clip = concatenate_videoclips(clip_queue, method="compose")
 
-if st.session_state.output is not None and os.path.exists(st.session_state.output):
-    st.write("Final Result")
+        # Write final result
+        final_clip.write_videofile(st.session_state.output, codec="libx264")
+
+    return st.session_state.output
+
+
+if st.button(
+    "Create Compilation",
+    disabled=len(st.session_state.streamers_available) == 0,
+):
+    start_downloading()
+    st.session_state.output = start_merging()
     st.video(st.session_state.output)
