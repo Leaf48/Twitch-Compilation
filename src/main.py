@@ -30,17 +30,17 @@ if "font_path" not in st.session_state:
     st.session_state.font_path = None
 if "streamers" not in st.session_state:
     st.session_state.streamers = [
-        "dmf_kyochan",
-        "dasoku_aniki",
-        "yuyuta0702",
-        "turuokamonohashi",
-        "kokujintv",
-        "kato_junichi0817",
-        "hanjoudesu",
-        "nekoko88",
-        "bakumatsu_shishi",
-        "myakkomyako",
-        "kosuke_saiore",
+        # "dmf_kyochan",
+        # "dasoku_aniki",
+        # "yuyuta0702",
+        # "turuokamonohashi",
+        # "kokujintv",
+        # "kato_junichi0817",
+        # "hanjoudesu",
+        # "nekoko88",
+        # "bakumatsu_shishi",
+        # "myakkomyako",
+        # "kosuke_saiore",
     ]
 if "streamers_available" not in st.session_state:
     st.session_state.streamers_available = []

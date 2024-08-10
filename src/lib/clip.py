@@ -9,7 +9,7 @@ def add_title_to_video(video_path: str, font_path: str, clip_title: str, output:
         video_path,
         "-vf",
         f"drawtext=fontfile='{font_path}':text='{clip_title}':"
-        "x=45:y=(h-text_h)-10:fontsize=64:fontcolor=white:"
+        "x=45:y=(h-text_h)-10:fontsize=54:fontcolor=white:"
         "box=1:boxcolor=black@0.65:boxborderw=8",
         output,
     ]
